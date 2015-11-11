@@ -1,8 +1,10 @@
 __author__ = 'montanawong'
 
 from random import uniform, random
+from math import sqrt
 from bots.bot import Bot
-from deuces3x.deuces.evaluator import Evaluator, Card
+from deuces3x.deuces.evaluator import Evaluator
+from deuces3x.deuces.card import Card
 from .utils.prediction import generate_possible_hands as gen_hands, \
                                 generate_possible_boards as gen_boards, \
                                 EPSILON, \
@@ -29,11 +31,26 @@ class MyBot(Bot):
     def get_memory(self):
         return self.notes
 
+
+    '''
+    notes: make betting decisions on hand value, risk and aggressiveness
+    Since our agent is playing nolimit
+    hold’em and raise amounts are not pre-defined, we divide raises into three
+    categories—small, medium, and large raises—which are considered as separate
+    actions.
+    create exhaustive lookup table of all combinations of hand/board
+    http://www2.cs.uregina.ca/~hilder/refereed_conference_proceedings/canai07.pdf
+    Dive into this tonight.
+    http://arxiv.org/pdf/1301.5943.pdf
+    opponent model is based on the percentage the player folds w/ his aggression factor.
+    aggression factor = #bet+#raises/numcalls
+
+    '''
+
     def get_action(self, context):
         print(context['players'])
         #preflop
         if len(context['board']) == 0:
-            #pre flop
             return self.get_preflop_action(context)
 
         #assume for now at this point we are post flop
@@ -58,10 +75,14 @@ class MyBot(Bot):
         first_move = False
         opponents_last_move = None
 
+        #risk = sqrt((4/3.0) * ((bet * (2 * bet + pot_size))/(maxpot*(bet+pot))))
+
         if context['history'][-1]['type'] == 'DEAL':
             first_move = True
         else:
             opponents_last_move = self.check_opponents_last_move(context)
+            if opponents_last_move is None:
+                raise Exception('Error reading history')
 
         #try rudimentary algorithm
         #add weight to bet if they already have alot invested
@@ -75,7 +96,7 @@ class MyBot(Bot):
         #if this is the first action in round and bot is first
         if first_move:
             if random() <= hand_strength:
-                if random() <= .3:
+                if self.calculate_aggression() < self.aggression_factor: #random() <= .3:
                     do['action'] = 'bet'
                     if hand_strength >= 0.85:
                         #all in
@@ -96,7 +117,7 @@ class MyBot(Bot):
         else:
             #if second
             #if I need to call a bet
-            if opponents_last_move == 'BET' or opponents_last_move == 'RAISE':
+            if opponents_last_move == 'BET':# or opponents_last_move == 'RAISE':
                 amount_to_call = context['legal_actions']['CALL']['amount']
                 #pressured to go all in
                 if amount_to_call >= stack_size:
@@ -107,7 +128,7 @@ class MyBot(Bot):
                 #not currently pressured to go all in
                 elif random() <= hand_strength:
                     #maybe factor in the number of times I've already raised previously this turn
-                    if random() <= .5:
+                    if self.calculate_aggression() < self.aggression_factor: #random() <= .5:
                         do['action'] = 'raise'
                         do['amount'] = min(
                             int(round(context['legal_actions']['RAISE']['min'] * (1 + hand_strength))),
@@ -132,25 +153,24 @@ class MyBot(Bot):
                         do['min'] = context['legal_actions']['BET']['min']
                         do['max'] = stack_size'''
                     #try using aggression_factor as a determinant of betting
-                    if (self.num_bets / self.num_checks) < self.aggression_factor:
+                    if self.calculate_aggression() < self.aggression_factor:
                         do['action'] = 'bet'
                         do['amount'] = min(
                             int(round(context['legal_actions']['BET']['min'] * (1 + hand_strength))),
                             stack_size)
                         do['min'] = context['legal_actions']['BET']['min']
                         do['max'] = stack_size
-                        #might do something here to go all in if necessary
-                        #there is a case where you are all in and you can still bet but the amount is 0
                     else:
                         do['action'] = 'check'
                 else:
                     do['action'] = 'check'
                 fold = False
-            #raise
+
             elif opponents_last_move == 'RAISE':
                 amount_to_call = context['legal_actions']['CALL']['amount']
                 if random() <= hand_strength:
-                    if hand_strength > .70:
+                    #if hand_strength > .70:
+                    if self.calculate_aggression() < self.aggression_factor:
                         do['action'] = 'raise'
                         do['amount'] = min(
                             int(round(context['legal_actions']['RAISE']['min'] * (1 + hand_strength))),
@@ -192,6 +212,9 @@ class MyBot(Bot):
         do['action'] = 'check'
         return create_action(do, self)
 
+    def calculate_aggression(self):
+        return self.num_bets / self.num_checks
+
     def calculate_hand_strength(self, board=None):
         #assume this is only called post flop
 
@@ -224,7 +247,7 @@ class MyBot(Bot):
 
 
     def calculate_pre_flop_hand_strength(self):
-        #process taken from Poker expert Bill Chen http://www.simplyholdem.com/chen.html
+        #process inspired from Poker expert Bill Chen http://www.simplyholdem.com/chen.html
 
         curr_pocket = list(map(Card.new, self.pocket))
         score = 0
