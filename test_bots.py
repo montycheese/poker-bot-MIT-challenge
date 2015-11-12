@@ -8,6 +8,7 @@ class TestBot1(MyBot):
     This bot always checks/calls no matter what
     """
     def get_action(self, context):
+        print(self.pocket)
         if len(context['board']) == 0:
             return self.get_preflop_action(context)
 
@@ -45,6 +46,7 @@ class TestBot1(MyBot):
                 amount_to_call = context['legal_actions']['CALL']['amount']
                 do['action'] = 'call'
                 do['amount'] = amount_to_call
+                print("currently " + do['action'] + "ing " +  "risk: " + str(self.calculate_risk(context, do['amount'], stack_size)))
                 fold = False
             #else if I need to reply to a check
             elif opponents_last_move == 'CHECK':
@@ -55,6 +57,7 @@ class TestBot1(MyBot):
                 amount_to_call = context['legal_actions']['CALL']['amount']
                 do['action'] = 'call'
                 do['amount'] = amount_to_call
+                print("currently " + do['action'] + "ing " +   "risk: " + str(self.calculate_risk(context, do['amount'], stack_size)))
                 fold = False
 
         if fold:
@@ -71,22 +74,24 @@ class TestBot2(MyBot):
     This bot always bets/calls no matter what
     """
     def get_action(self, context):
-        if len(context['board']) == 0:
-            return self.get_preflop_action(context)
-
+        print(context)
         #assume for now at this point we are post flop
         stack_size = self.check_stack_size(context, True)
-        opponents_stack_size = self.check_stack_size(context, False )
+        opponents_stack_size = self.check_stack_size(context, False)
 
         do = dict()
         fold = True
         first_move = False
         opponents_last_move = None
 
+
         if context['history'][-1]['type'] == 'DEAL':
             first_move = True
         else:
             opponents_last_move = self.check_opponents_last_move(context)
+
+        if len(context['board']) == 0:
+            return self.get_preflop_action(context, first_move, opponents_last_move, stack_size)
 
         #try rudimentary algorithm
         #add weight to bet if they already have alot invested
@@ -134,3 +139,17 @@ class TestBot2(MyBot):
 
     def set_pocket(self, card1, card2):
         super().set_pocket(card1, card2)
+
+    def get_preflop_action(self, context, first_move, opponents_last_move, stack_size):
+        do = dict()
+        if first_move:
+            do['action'] = 'check'
+        else:
+            if opponents_last_move == 'BET' or opponents_last_move == 'RAISE':
+                amount_to_call = context['legal_actions']['CALL']['amount']
+                do['action'] = 'call'
+                do['amount'] = amount_to_call
+            else:
+                do['action'] = 'check'
+        #print(do['action'])
+        return create_action(do, self)

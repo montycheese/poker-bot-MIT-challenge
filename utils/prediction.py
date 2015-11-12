@@ -4,6 +4,7 @@ from deuces3x.deuces.deck import Deck
 from deuces3x.deuces.card import Card
 from deuces3x.deuces.evaluator import Evaluator
 from api import LegalFold, LegalRaise, LegalCall, LegalBet, LegalCheck
+from random import shuffle
 
 
 FULL_DECK = set(Deck().GetFullDeck())
@@ -12,16 +13,16 @@ EPSILON = float(1E-5)
 def generate_possible_hands(cards_in_play):
     cards_in_play = set(cards_in_play)
 
-    #domain only contains cards not visible by our player
-    domain = list(FULL_DECK - cards_in_play)
+    #deck only contains cards not visible by our player
+    deck = list(FULL_DECK - cards_in_play)
     combinations = []
 
     #generate all 2 pair combinations of cards that the other player may have
-    for first_card in range(len(domain)-1):
-        for second_card in range(first_card+1, len(domain)):
-            combinations.append([domain[first_card], domain[second_card]])
+    for first_card in range(len(deck)-1):
+        for second_card in range(first_card+1, len(deck)):
+            combinations.append([deck[first_card], deck[second_card]])
 
-    #print(combinations) #amount should be len(domain) Choose 2
+    #print(combinations) #amount should be len(deck) Choose 2
     return combinations
 
 def generate_possible_boards(curr_board, player_hands):
@@ -30,19 +31,19 @@ def generate_possible_boards(curr_board, player_hands):
         raise Exception('invalid board length')
 
     cards_in_play = set(curr_board + player_hands)
-    domain = list(FULL_DECK - cards_in_play)
+    deck = list(FULL_DECK - cards_in_play)
 
     #if len(curr_board) == 4:
     #testing only trying next card b/c doing 2 takes way too long
-    return [([domain[i]] + curr_board[:]) for i in range(len(domain))]
+    return [([deck[i]] + curr_board[:]) for i in range(len(deck))]
 
 
     #board is only size 3
     new_boards = []
 
-    for first_card in range(len(domain)-1):
-        for second_card in range(first_card+1, len(domain)):
-            new_boards.append(curr_board[:] + [domain[first_card], domain[second_card]])
+    for first_card in range(len(deck)-1):
+        for second_card in range(first_card+1, len(deck)):
+            new_boards.append(curr_board[:] + [deck[first_card], deck[second_card]])
 
 
     return new_boards
@@ -214,6 +215,36 @@ def create_ehs_table():
     with open('effective_hand_strength_table.txt', 'a') as file:
         file.write(str(table))
     print("complete")
+
+
+def simulate_games(pocket, context, iterations):
+    wins = 0
+    ties = 0
+    evaluator = Evaluator()
+    # change card representations from str to int
+    pocket = list(map(Card.new, pocket))
+    if len(context['board']) == 0:
+        for i in range(iterations):
+            deck = list(FULL_DECK - set(pocket))
+            shuffle(deck)
+            #set opponent's pocket
+            opponent_pocket = [deck.pop() for i in range(2)]
+            #generate random possible board
+            board = [deck.pop() for i in range(5)]
+            hand_rank = evaluator.evaluate(pocket, board)
+            opponent_hand_rank = evaluator.evaluate(opponent_pocket, board)
+
+            if hand_rank == opponent_hand_rank:
+                ties += 1
+                #smaller hand_rank means higher ranking cards
+            elif hand_rank < opponent_hand_rank:
+                wins += 1
+
+        odds = (wins + ties / 2.0) / iterations
+        return odds
+    else:
+        raise Exception('not implemented yet')
+
 
 
 
