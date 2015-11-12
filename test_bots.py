@@ -9,22 +9,24 @@ class TestBot1(MyBot):
     """
     def get_action(self, context):
         print(self.pocket)
-        if len(context['board']) == 0:
-            return self.get_preflop_action(context)
-
-        #assume for now at this point we are post flop
-        stack_size = self.check_stack_size(context, True)
-        opponents_stack_size = self.check_stack_size(context, False )
-
         do = dict()
         fold = True
         first_move = False
         opponents_last_move = None
+        stack_size = self.check_stack_size(context, True)
+        opponents_stack_size = self.check_stack_size(context, False )
 
         if context['history'][-1]['type'] == 'DEAL':
             first_move = True
         else:
             opponents_last_move = self.check_opponents_last_move(context)
+        if len(context['board']) == 0:
+            return self.get_preflop_action(context, first_move, opponents_last_move, stack_size)
+
+
+
+
+
 
         #try rudimentary algorithm
         #add weight to bet if they already have alot invested
@@ -74,7 +76,7 @@ class TestBot2(MyBot):
     This bot always bets/calls no matter what
     """
     def get_action(self, context):
-        print(context)
+        #print(context['history'])
         #assume for now at this point we are post flop
         stack_size = self.check_stack_size(context, True)
         opponents_stack_size = self.check_stack_size(context, False)

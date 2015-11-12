@@ -246,6 +246,8 @@ def simulate_games(pocket, context, iterations):
         raise Exception('not implemented yet')
 
 
+def load_cache():
+    pass
 
 
 if __name__ == "__main__":
