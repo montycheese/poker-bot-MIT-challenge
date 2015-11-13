@@ -5,10 +5,12 @@ from deuces3x.deuces.deck import Deck
 from api import LegalFold, LegalRaise, LegalCall, LegalBet, LegalCheck
 from deuces3x.deuces.evaluator import Evaluator
 from random import uniform, random, shuffle
+from math import sqrt
 from .utils.prediction import generate_possible_hands as gen_hands, \
                                 generate_possible_boards as gen_boards, \
-                                EPSILON
-from math import sqrt
+                                EPSILON, \
+                                load_cache
+
 
 FULL_DECK = set(Deck().GetFullDeck())
 
@@ -650,10 +652,6 @@ class HeadsUpStrategy(PokerStrategy):
                 action (LegalAction) returns the best determined action based on the bot's interpretation of the current
                         game state and strategy.
         """
-        #print(context)
-        #print(context['players'])
-        #print(bot.pocket)
-
         # clear our action dictionary
         self.do.clear()
         fold = True
@@ -669,7 +667,7 @@ class HeadsUpStrategy(PokerStrategy):
         elif context['history'][-1]['type'] == 'POST' and len(context['board']) == 0:
             first_move = True
         else:
-            # if we aren't going first, determine the move is preceding this one
+            # if we aren't going first, determine the move that is preceding this one
             opponents_last_move = self.check_opponents_last_move(context, bot)
             if opponents_last_move is None:
                 raise Exception('Error reading history')
@@ -702,7 +700,7 @@ class HeadsUpStrategy(PokerStrategy):
                 self.do['action'] = 'check'
             return PokerStrategy.create_action(self.do, bot)
 
-        # if we are making the first move of the round #
+        # if we are making the first move of the round
         if first_move:
             # percepts -> bet?
             # given percepts from the world, determine whether or not we should bet
@@ -721,7 +719,7 @@ class HeadsUpStrategy(PokerStrategy):
                 # if we are pressured to go all in
                 if amount_to_call >= stack_size:
                     # percepts -> call?
-                    # given percepts from the world, determine if we should call the bet
+                    # given percepts from the game world, determine if we should call the bet
                     call = self.do_call(context, bot, stack_size, opponents_stack_size, hand_strength)
                     if call:
                         fold = False
@@ -783,7 +781,6 @@ class HeadsUpStrategy(PokerStrategy):
         if fold:
             self.do['action'] = 'fold'
 
-        #print(self.do['action'])
         action = PokerStrategy.create_action(self.do, bot)
         return action
 
@@ -1035,7 +1032,6 @@ class AlwaysCall(HeadsUpStrategy):
                 amount_to_call = context['legal_actions']['CALL']['amount']
                 self.do['action'] = 'call'
                 self.do['amount'] = amount_to_call
-                #print("currently " + do['action'] + "ing " +  "risk: " + str(self.calculate_risk(context, do['amount'], stack_size)))
                 fold = False
             #else if I need to reply to a check
             elif opponents_last_move == 'CHECK':
@@ -1046,13 +1042,11 @@ class AlwaysCall(HeadsUpStrategy):
                 amount_to_call = context['legal_actions']['CALL']['amount']
                 self.do['action'] = 'call'
                 self.do['amount'] = amount_to_call
-                #print("currently " + do['action'] + "ing " +   "risk: " + str(self.calculate_risk(context, do['amount'], stack_size)))
                 fold = False
 
         if fold:
             self.do['action'] = 'fold'
 
-        #print(self.name + ' is: ' + self.do['action'] + 'ing')
         return PokerStrategy.create_action(self.do, bot)
 
 
@@ -1087,10 +1081,6 @@ class AlwaysBet(HeadsUpStrategy):
 
         if len(context['board']) == 0:
             return self.determine_preflop_action(context,bot, first_move, opponents_last_move, stack_size, opponents_stack_size)
-
-        #try rudimentary algorithm
-        #add weight to bet if they already have alot invested
-        #at_stake = 0.0 #propagate this to attribute level
 
         #check if all in
         if stack_size == 0:
@@ -1162,4 +1152,4 @@ class AlwaysBet(HeadsUpStrategy):
             else:
                 self.do['action'] = 'check'
         #print(do['action'])
-        return create_action(self.do, bot)
+        return PokerStrategy.create_action(self.do, bot)

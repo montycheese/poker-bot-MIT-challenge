@@ -78,8 +78,8 @@ class MyBot(Bot):
         """
         @Override
 
-        :param card1:
-        :param card2:
+        :param card1: (Card) First card in pocket
+        :param card2: (Card) Second card in pocket
         :return:
         """
         self.pocket = [card1, card2]

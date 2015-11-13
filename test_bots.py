@@ -5,6 +5,7 @@ from .strategy import AlwaysCall, AlwaysBet
 
 class TestBot1(MyBot):
     """
+    Naive bot for testing.
     This bot always checks/calls no matter what
     """
     def __init__(self, name):
@@ -21,6 +22,7 @@ class TestBot1(MyBot):
 
 class TestBot2(MyBot):
     """
+    Naive bot for testing.
     This bot always bets/calls no matter what
     """
     def __init__(self, name):
