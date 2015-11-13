@@ -3,14 +3,21 @@ __author__ = 'montanawong'
 from deuces3x.deuces.deck import Deck
 from deuces3x.deuces.card import Card
 from deuces3x.deuces.evaluator import Evaluator
-from api import LegalFold, LegalRaise, LegalCall, LegalBet, LegalCheck
-from random import shuffle
 
 
 FULL_DECK = set(Deck().GetFullDeck())
 EPSILON = float(1E-5)
 
+
 def generate_possible_hands(cards_in_play):
+    """
+    Generates a list containing possible hands for an opponent given
+    visible board cards, and the bot's hand.
+    :param cards_in_play: cards currently visible to the bot
+    :return:
+            combinations (list) a multidimensional array containing all
+            possible hands the opponent can have.
+    """
     cards_in_play = set(cards_in_play)
 
     #deck only contains cards not visible by our player
@@ -25,20 +32,30 @@ def generate_possible_hands(cards_in_play):
     #print(combinations) #amount should be len(deck) Choose 2
     return combinations
 
-def generate_possible_boards(curr_board, player_hands):
 
+def generate_possible_boards(curr_board, player_hands):
+    """
+    Generates a list of possible boards given a board at either the flop or the turn.
+
+    :param curr_board: (list) The current board in the round
+    :param player_hands: (list) containing the bot's hand and a simulation of the opponents hand.
+
+    :return:
+            (list) a multidimensional array containing all possible boards of len(curr_board) + 1
+    """
     if len(curr_board) < 3 or len(curr_board) >= 5:
         raise Exception('invalid board length')
 
     cards_in_play = set(curr_board + player_hands)
     deck = list(FULL_DECK - cards_in_play)
 
-    #if len(curr_board) == 4:
-    #testing only trying next card b/c doing 2 takes way too long
+    # generate boards with an additional card
     return [([deck[i]] + curr_board[:]) for i in range(len(deck))]
 
-
-    #board is only size 3
+    '''
+    Computing boards up to size 5 from the flop is too computationally
+    expensive.
+    board is only size 3
     new_boards = []
 
     for first_card in range(len(deck)-1):
@@ -47,36 +64,17 @@ def generate_possible_boards(curr_board, player_hands):
 
 
     return new_boards
+    '''
 
 
-def create_action(action_info, bot):
-    action = None
-
-    if action_info['action'] == 'check':
-        action = LegalCheck()
-        bot.num_checks += 1
-    elif action_info['action'] == 'call':
-        action = LegalCall()
-        action['amount'] = action_info['amount']
-    elif action_info['action'] == 'bet':
-        action = LegalBet(
-            action_info['min'],
-            action_info['max'])
-        action['amount'] = action_info['amount']
-        bot.num_bets += 1
-    elif action_info['action'] == 'raise':
-        action = LegalRaise(
-            min_amount=action_info['min'],
-            max_amount=action_info['max'])
-        action['amount'] = action_info['amount']
-        bot.num_raises += 1
-    else:
-        return LegalFold()
-
-    return action
 
 def create_hand_strength_table():
-    #algorithm http://paginas.fe.up.pt/~niadr/PUBLICATIONS/LIACC_publications_2011_12/pdf/CN10_Estimating_Probability_Winning_LFT.pdf
+    """
+    Pre computes all possible hand strengths for each combination of hands, boards, and opponent's hands.
+    I was unable to run this script in its entirety because I lack the time or computational power.
+    This precomputed cache would trim down on calculations during gameplay however!
+    :return: (void)
+    """
     evaluator = Evaluator()
     #generate all possible boards
     #board size = 3 first
@@ -106,12 +104,6 @@ def create_hand_strength_table():
                             behind += 1
                     hand_strength =  (ahead + (tied / 2.0)) / (ahead + tied + behind)
 
-                    '''
-                    print(hand_strength)
-                    print(list(map(Card.int_to_pretty_str,board)))
-                    print(list(map(Card.int_to_pretty_str,pocket)))
-                    print(list(map(Card.int_to_pretty_str,other_pocket)))
-                    '''
                     #key in table is sorted sequence of hand and board, value is the hand strength
                     #precompute values to avoid long computation times during gameplay
                     key = tuple(sorted(pocket + board))
@@ -131,8 +123,14 @@ def create_hand_strength_table():
 
 def create_ehs_table():
     """
-    create effective hand strength cache. Prevents large calculation time during game
-    :return: None
+    Pre computes all possible effective hand strengths for each combination of hands, boards, and opponent's hands.
+    Stores these as a hashmap (dict)in a text file.
+
+    The key is a sorted tuple of our bot's cards, opponent's cards, and the board. The value of the map was the ehs.
+
+    I was unable to run this script in its entirety because I lack the time or computational power.
+    This precomputed cache would trim down on calculations during gameplay however!
+    :return: (void)
     """
     evaluator = Evaluator()
     #generate all possible boards
@@ -215,35 +213,6 @@ def create_ehs_table():
     with open('effective_hand_strength_table.txt', 'a') as file:
         file.write(str(table))
     print("complete")
-
-
-def simulate_games(pocket, context, iterations):
-    wins = 0
-    ties = 0
-    evaluator = Evaluator()
-    # change card representations from str to int
-    pocket = list(map(Card.new, pocket))
-    if len(context['board']) == 0:
-        for i in range(iterations):
-            deck = list(FULL_DECK - set(pocket))
-            shuffle(deck)
-            #set opponent's pocket
-            opponent_pocket = [deck.pop() for i in range(2)]
-            #generate random possible board
-            board = [deck.pop() for i in range(5)]
-            hand_rank = evaluator.evaluate(pocket, board)
-            opponent_hand_rank = evaluator.evaluate(opponent_pocket, board)
-
-            if hand_rank == opponent_hand_rank:
-                ties += 1
-                #smaller hand_rank means higher ranking cards
-            elif hand_rank < opponent_hand_rank:
-                wins += 1
-
-        odds = (wins + ties / 2.0) / iterations
-        return odds
-    else:
-        raise Exception('not implemented yet')
 
 
 def load_cache():
