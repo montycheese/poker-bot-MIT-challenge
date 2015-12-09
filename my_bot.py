@@ -68,9 +68,6 @@ class MyBot(Bot):
                 action (LegalAction) returns the best determined action based on the bot's interpretation of the current
                         game state and strategy.
         """
-        #print(context['players'])
-        #print(self.pocket)
-
         action = self.strategy.determine_action(context, self)
         return action
 

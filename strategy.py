@@ -886,51 +886,7 @@ class HeadsUpStrategy(PokerStrategy):
                         _raise = self.do_raise(context, bot, stack_size, opponents_stack_size, hand_strength, True)
                         if _raise is not None:
                             fold = False
-        '''TODO factor in aggression, risk, odds, and strength
-        #risk = self.calculate_risk(context, bet_size, stack_size=)
-        if first_move:
-            #print((preflop_odds + hand_strength) / 2.0)
-            if random() <= ((preflop_odds + hand_strength) / 2.0) * bot.aggression_factor:
-                do['action'] = 'bet'
-                do['amount'] = min(
-                            int(round(context['legal_actions']['BET']['min'] * (1 + hand_strength))),
-                            stack_size)
-                do['min'] = context['legal_actions']['BET']['min']
-                do['max'] = stack_size
-            #temp
-            else:
-                do['action'] = 'check'
-            fold = False
-        else:
-            #temp for sam
-            if opponents_last_move == 'BET' or opponents_last_move == 'RAISE':
-                amount_to_call = context['legal_actions']['CALL']['amount']
-                #if pressured all-in
-                if amount_to_call >= stack_size:
-                    if random() <= ((preflop_odds + hand_strength) / 2.0) * bot.aggression_factor and hand_strength >= 0.75:
-                        do['action'] = 'call'
-                        do['amount'] = amount_to_call
-                        fold = False
-                #if risk is low call
-                #elif random() <= ((preflop_odds + hand_strength) / 2.0) * self.aggression_factor:
-                elif random() <= (1 - self.calculate_risk(context, amount_to_call, stack_size)):
-                    do['action'] = 'call'
-                    do['amount'] = amount_to_call
-                    fold = False
-                elif self.calculate_aggression(bot.num_bets, bot.num_raises, bot.num_checks) < bot.aggression_factor and random() <= preflop_odds:
-                    do['action'] = 'raise'
-                    do['amount'] = min(
-                        int(round(context['legal_actions']['RAISE']['min'] * (1 + hand_strength))),
-                        stack_size)
-                    do['min'] = context['legal_actions']['RAISE']['min']
-                    do['max'] = stack_size
-                    fold = False
-            else:
-                do['action'] = 'check'
-                fold = False
-                #they checked
-            #temp for sam'''
-
+                            
         if fold:
             self.do['action'] = 'fold'
         #print(do['action'])
