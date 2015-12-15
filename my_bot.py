@@ -8,7 +8,7 @@ from .strategy import HeadsUpStrategy
 
 class MyBot(Bot):
     """
-     My custom Bot implementation that extends BlackBird's base Bot class. The logic
+     My custom Bot implementation that extendsa base Bot class. The logic
      and strategy of this bot is inspired by my own studies of partially observable
      games in A.I., as well as current academic literature on the subject of rational
      poker agents. Sources are noted where used. This class may be extended to
